@@ -201,3 +201,41 @@ func TestTransferList(t *testing.T) {
 
 	recipient.Del(rec.ID)
 }
+
+func TestTransferInsufficientFunds(t *testing.T) {
+	recipientParams := &stripe.RecipientParams{
+		Name: "Recipient Name",
+		Type: recipient.Individual,
+		Bank: &stripe.BankAccountParams{
+			Country: "US",
+			Routing: "110000000",
+			Account: "000222222227",
+		},
+	}
+
+	rec, _ := recipient.New(recipientParams)
+
+	transferParams := &stripe.TransferParams{
+		Amount:    100,
+		Currency:  currency.USD,
+		Recipient: rec.ID,
+		Desc:      "Transfer Desc",
+		Statement: "Transfer",
+	}
+
+	_, err := New(transferParams)
+
+	if err == nil {
+		t.Error("Expected to receive an error, but did not")
+	}
+
+	stripeErr := err.(*stripe.Error)
+
+	if stripeErr.Type != stripe.TransferErr {
+		t.Errorf("Unexpected error type %q", stripeErr.Type)
+	}
+
+	if stripeErr.Code != stripe.InsufficientFunds {
+		t.Errorf("Unexpected error code %q", stripeErr.Code)
+	}
+}

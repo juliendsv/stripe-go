@@ -65,7 +65,20 @@ func (c Client) New(params *stripe.TransferParams) (*stripe.Transfer, error) {
 	params.AppendTo(body)
 
 	transfer := &stripe.Transfer{}
-	err := c.B.Call("POST", "/transfers", c.Key, body, &params.Params, transfer)
+	var err error
+	err = c.B.Call("POST", "/transfers", c.Key, body, &params.Params, transfer)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(transfer.FailMsg) > 0 {
+		err = &stripe.Error{
+			Type: stripe.TransferErr,
+			Msg:  transfer.FailMsg,
+			Code: stripe.ErrorCode(transfer.FailCode),
+		}
+	}
 
 	return transfer, err
 }
